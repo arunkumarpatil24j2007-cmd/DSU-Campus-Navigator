@@ -8,90 +8,165 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>DSU Campus Navigator 3D</title>
+<title>DSU Campus Navigator</title>
 <style>
-  :root{--blue:#1a73e8;--ink:#1f2328;--mute:#5f6670;--line:#e3e6ea;--bg:#fff;--chip:#f1f3f4}
+  :root{--blue:#1a73e8;--blue-soft:#eef4fe;--ink:#1f2328;--mute:#5f6670;--line:#e4e7eb;--bg:#fff;--chip:#f1f3f4;--green:#188038;--red:#d93025;--r:16px;--shadow:0 6px 28px rgba(0,0,0,.18);--peek:136px;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;overflow:hidden;font-family:Inter,system-ui,sans-serif;color:var(--ink);background:#cfd8dc}
+  html,body{margin:0;height:100%;overflow:hidden;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#cfd8dc;-webkit-tap-highlight-color:transparent}
+  button{font:inherit;color:inherit}
+  button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  [hidden]{display:none!important}
   #app{position:fixed;inset:0}
   canvas#gl{display:block;width:100%;height:100%;touch-action:none}
-  .panel{position:absolute;left:12px;top:12px;bottom:12px;width:340px;background:var(--bg);border-radius:14px;box-shadow:0 4px 24px rgba(0,0,0,.18);display:flex;flex-direction:column;overflow:hidden;z-index:5;transition:transform .25s}
-  .panel.hidden{transform:translateX(-360px)}
-  .ph{padding:14px 16px 10px;border-bottom:1px solid var(--line)}
-  .ph h1{font-size:16px;margin:0 0 2px;font-weight:700;display:flex;align-items:center;gap:8px}
-  .ph p{margin:0;font-size:12px;color:var(--mute)}
-  .pb{flex:1;overflow:auto;padding:12px 16px}
-  label.l{display:block;font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin:10px 0 4px}
-  select,input[type=text],input[type=number]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font:inherit;font-size:13px;background:#fff;color:var(--ink)}
-  .row{display:flex;gap:6px;align-items:center}
-  .seg{display:flex;background:var(--chip);border-radius:10px;padding:3px;gap:3px;margin-top:6px}
-  .seg button{flex:1;border:0;background:transparent;padding:7px 4px;border-radius:8px;font:inherit;font-size:12px;cursor:pointer;color:var(--mute)}
+
+  /* ---------- side panel / bottom sheet ---------- */
+  .sheet{position:absolute;left:12px;top:calc(12px + var(--sat));bottom:12px;width:360px;background:var(--bg);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;z-index:10;transition:transform .25s ease}
+  .sheet.hidden{transform:translateX(calc(-100% - 24px))}
+  .grab{display:none}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 14px 10px 16px}
+  .brand{display:flex;align-items:center;gap:11px;min-width:0}
+  .logo{width:38px;height:38px;border-radius:11px;background:var(--blue);display:grid;place-items:center;flex:none}
+  .brand h1{font-size:16px;margin:0;font-weight:700;letter-spacing:-.01em}
+  .brand p{margin:2px 0 0;font-size:12.5px;color:var(--mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #peek{display:none}
+  .icon-btn{width:36px;height:36px;border-radius:50%;border:0;background:var(--chip);cursor:pointer;font-size:15px;flex:none;display:grid;place-items:center}
+  .icon-btn:hover{background:#e6e8ea}
+  .tabs{display:flex;padding:0 8px;border-bottom:1px solid var(--line)}
+  .tabs button{flex:1;border:0;background:none;padding:8px 2px 9px;font-size:12px;font-weight:600;color:var(--mute);cursor:pointer;border-bottom:2.5px solid transparent;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:52px}
+  .tabs button .ti{font-size:18px;line-height:1}
+  .tabs button:hover{color:var(--ink)}
+  .tabs button.on{color:var(--blue);border-bottom-color:var(--blue)}
+  .views{flex:1;overflow:auto;overscroll-behavior:contain}
+  .view{display:none;padding:16px 16px calc(24px + var(--sab))}
+  .view.on{display:block}
+  .flabel{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.05em;margin:18px 0 7px}
+  .flabel:first-child{margin-top:0}
+  .hint{font-size:12.5px;color:var(--mute);line-height:1.5;margin:6px 0 0}
+
+  /* route tab */
+  .trip{position:relative;border:1px solid var(--line);border-radius:12px;padding:2px 52px 2px 12px}
+  .leg{display:flex;align-items:center;gap:11px}
+  .leg+.leg{border-top:1px solid var(--line)}
+  .pt{width:13px;height:13px;border-radius:50%;flex:none}
+  .pt.a{border:3.5px solid var(--green)}
+  .pt.b{background:var(--red)}
+  .leg select{flex:1;min-width:0;border:0;background:transparent;font:inherit;font-size:14.5px;padding:13px 0;color:var(--ink);cursor:pointer;-webkit-appearance:none;appearance:none;text-overflow:ellipsis}
+  .swap{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:17px;display:grid;place-items:center}
+  .swap:hover{background:var(--chip)}
+  .seg{display:flex;background:var(--chip);border-radius:12px;padding:3px;gap:3px}
+  .seg button{flex:1;border:0;background:transparent;padding:9px 4px;border-radius:9px;font-size:13.5px;cursor:pointer;color:var(--mute);font-weight:500;min-height:40px}
   .seg button.on{background:#fff;color:var(--blue);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.12)}
-  .btn{border:0;background:var(--blue);color:#fff;padding:9px 12px;border-radius:9px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
-  .btn.ghost{background:var(--chip);color:var(--ink);font-weight:500}
-  .btn:disabled{opacity:.5;cursor:default}
-  .swap{flex:0 0 34px;height:34px;padding:0;border-radius:50%}
-  .routes{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-  .rc{border:1px solid var(--line);border-radius:11px;padding:10px 12px;cursor:pointer}
-  .rc.on{border-color:var(--blue);background:#f3f8ff}
-  .rc .t{font-size:18px;font-weight:700}
-  .rc .t small{font-size:12px;font-weight:500;color:var(--mute);margin-left:6px}
-  .rc .v{font-size:12px;color:var(--mute);margin-top:2px}
-  .tag{display:inline-block;font-size:10px;font-weight:600;padding:2px 6px;border-radius:5px;background:#e6f4ea;color:#137333;margin-left:6px;vertical-align:middle}
-  .tag.alt{background:#fef7e0;color:#9a6700}
-  .sim{margin-top:12px;border:1px solid var(--line);border-radius:11px;padding:10px 12px}
-  .sim h4{margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
-  .sim h4 span{font-weight:500;color:var(--mute);font-size:11px}
-  .sim .row .btn{padding:7px 10px;font-size:12px}
-  .sim input[type=range]{width:100%}
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-  .stats div{background:var(--chip);border-radius:8px;padding:6px 8px;font-size:11px;color:var(--mute)}
-  .stats b{display:block;font-size:15px;color:var(--ink)}
-  .cur{margin-top:8px;font-size:12px;background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:6px 8px;min-height:30px}
-  .legend{display:flex;flex-wrap:wrap;gap:6px 10px;margin-top:8px;font-size:11px;color:var(--mute)}
-  .legend span{display:flex;align-items:center;gap:5px}
-  .legend i{display:inline-block;width:16px;height:4px;border-radius:2px}
-  .legend i.dot{width:9px;height:9px;border-radius:50%}
-  ol.log{list-style:none;margin:8px 0 0;padding:0;max-height:190px;overflow:auto;font-size:11.5px;font-family:ui-monospace,Menlo,monospace;border-top:1px solid var(--line)}
+  .result{margin-top:18px;border-radius:14px;background:var(--blue-soft);padding:14px 14px 14px 16px}
+  .result.empty{background:var(--chip);color:var(--mute);font-size:13.5px;line-height:1.5}
+  .result .big{font-size:28px;font-weight:700;letter-spacing:-.02em}
+  .result .big span{font-size:15px;font-weight:500;color:var(--mute);letter-spacing:0}
+  .result .via{font-size:13px;color:var(--mute);margin-top:3px;line-height:1.45}
+  .result .via b{color:var(--ink);font-weight:600}
+  .acts{display:flex;gap:8px;margin-top:14px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;background:var(--blue);color:#fff;padding:10px 14px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;min-height:44px;white-space:nowrap}
+  .btn:hover{filter:brightness(1.06)}
+  .btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);font-weight:500}
+  .btn.ghost:hover{background:var(--chip);filter:none}
+  .btn.block{flex:1}
+  .quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+  /* places tab */
+  .search{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;font-size:14.5px;background:#fff;color:var(--ink)}
+  .cats{display:flex;gap:6px;overflow-x:auto;margin:12px -16px 4px;padding:0 16px 4px;scrollbar-width:none}
+  .cats::-webkit-scrollbar{display:none}
+  .cats button{flex:none;border:1px solid var(--line);background:#fff;border-radius:18px;padding:7px 13px;font-size:13px;cursor:pointer;color:var(--mute)}
+  .cats button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .plist{list-style:none;margin:6px 0 0;padding:0}
+  .plist li{display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--line)}
+  .plist li.none{padding:18px 4px;color:var(--mute);font-size:13.5px;border:0}
+  .pmain{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:none;padding:11px 4px;text-align:left;cursor:pointer;border-radius:10px}
+  .pmain:hover{background:var(--chip)}
+  .pmain .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .pn{min-width:0;display:flex;flex-direction:column}
+  .pn b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pn small{font-size:12px;color:var(--mute);margin-top:1px}
+  .pn small i{font-style:normal;color:var(--blue);font-weight:600}
+  .pfrom{flex:none;border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer;color:var(--mute)}
+  .pfrom:hover{background:var(--chip);color:var(--ink)}
+
+  /* algorithm tab */
+  .intro{font-size:13.5px;line-height:1.5;margin:0;color:var(--ink)}
+  .intro b{font-weight:600}
+  .player{display:grid;grid-template-columns:44px 1fr 64px 44px;gap:6px;margin-top:14px}
+  .player button{border:1px solid var(--line);background:#fff;border-radius:11px;min-height:44px;cursor:pointer;font-size:14px}
+  .player button:hover{background:var(--chip)}
+  .player .primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+  .player .primary:hover{background:var(--blue);filter:brightness(1.06)}
+  input[type=range]{width:100%;accent-color:var(--blue)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:14px}
+  .stats div{background:var(--chip);border-radius:10px;padding:8px 10px;font-size:11.5px;color:var(--mute)}
+  .stats b{display:block;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .explain{margin-top:10px;font-size:13px;line-height:1.5;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:9px 11px;min-height:5.6em}
+  .legend{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-top:12px;font-size:12px;color:var(--mute)}
+  .legend span{display:flex;align-items:center;gap:7px}
+  .legend i{display:inline-block;width:18px;height:5px;border-radius:3px;flex:none}
+  .legend i.dot{width:10px;height:10px;border-radius:50%}
+  details{margin-top:14px;border-top:1px solid var(--line);padding-top:10px}
+  summary{font-size:13px;font-weight:600;cursor:pointer;color:var(--mute);padding:4px 0}
+  ol.log{list-style:none;margin:6px 0 0;padding:0;max-height:220px;overflow:auto;font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
   ol.log li{padding:4px 0;border-bottom:1px dashed var(--line);color:var(--mute)}
   ol.log li.v{color:#5b21b6;font-weight:600}
   ol.log li.ok{color:#9a3412}
   ol.log li.done{color:#b91c1c;font-weight:700}
-  .dbadge{position:absolute;transform:translate(-50%,-150%);font:600 10px Inter,sans-serif;padding:1px 5px;border-radius:6px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;pointer-events:none;white-space:nowrap}
-  .dbadge.set{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
-  .dbadge.cur{background:#fde047;color:#422006;border-color:#eab308}
-  .places{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-  .chip{border:1px solid var(--line);background:#fff;border-radius:16px;padding:5px 10px;font-size:12px;cursor:pointer}
-  .chip:hover{background:var(--chip)}
-  .note{font-size:11px;color:var(--mute);line-height:1.45;margin-top:12px}
-  .cmp{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
-  .cmp td,.cmp th{padding:5px 4px;border-bottom:1px solid var(--line);text-align:left}
-  .cmp th{color:var(--mute);font-weight:600;font-size:11px}
-  details{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
-  summary{font-size:12px;font-weight:600;cursor:pointer;color:var(--mute)}
-  .toggle{position:absolute;left:12px;top:12px;z-index:6;display:none}
-  .views{position:absolute;right:12px;top:12px;z-index:5;display:flex;gap:6px}
-  .vb{border:0;background:#fff;padding:9px 13px;border-radius:10px;font:inherit;font-size:13px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,.18);cursor:pointer;color:var(--ink)}
-  .vb.on{background:var(--blue);color:#fff}
-  #mini{position:absolute;right:12px;bottom:12px;width:300px;height:169px;border-radius:12px;box-shadow:0 2px 14px rgba(0,0,0,.25);z-index:5;background:#eee;cursor:crosshair;border:3px solid #fff}
-  #compass{position:absolute;right:24px;top:62px;width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 2px 10px rgba(0,0,0,.2);z-index:5;display:flex;align-items:center;justify-content:center;cursor:pointer}
-  #compass svg{transition:none}
-  #hud{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(32,33,36,.86);color:#fff;padding:8px 14px;border-radius:10px;font-size:12px;z-index:5;pointer-events:none;text-align:center;max-width:60vw}
+
+  /* more tab */
+  .group{padding:16px 0;border-bottom:1px solid var(--line)}
+  .group:first-child{padding-top:0}
+  .group:last-child{border:0}
+  .group h3{font-size:14px;margin:0 0 10px;font-weight:700}
+  .row{display:flex;gap:8px;align-items:center}
+  .row input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:14px}
+  .cmp{width:100%;border-collapse:collapse;font-size:13px}
+  .cmp td,.cmp th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:left}
+  .cmp th{color:var(--mute);font-weight:600;font-size:11.5px}
+  .cmp td:not(:first-child),.cmp th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+  a{color:var(--blue)}
+
+  /* ---------- map chrome ---------- */
+  .fab-open{position:absolute;left:12px;top:calc(12px + var(--sat));z-index:9;border:0;background:#fff;padding:11px 16px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 2px 12px rgba(0,0,0,.2);cursor:pointer}
+  .mapctl{position:absolute;right:12px;top:calc(12px + var(--sat));z-index:8;display:flex;flex-direction:column;gap:8px}
+  .mapctl button{width:46px;height:46px;border-radius:13px;border:0;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.18);cursor:pointer;display:grid;place-items:center;font-size:19px;color:var(--ink)}
+  .mapctl button:hover{background:#f6f7f8}
+  .mapctl button.on{color:var(--blue)}
+  #mini{position:absolute;right:12px;bottom:12px;width:300px;height:169px;border-radius:14px;box-shadow:0 2px 14px rgba(0,0,0,.25);z-index:8;background:#eee;cursor:crosshair;border:3px solid #fff}
+  #hud{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:rgba(32,33,36,.86);color:#fff;padding:9px 15px;border-radius:12px;font-size:12.5px;z-index:7;pointer-events:none;text-align:center;max-width:min(560px,70vw);transition:opacity .5s}
+  #hud.gone{opacity:0}
   #labels{position:absolute;inset:0;pointer-events:none;z-index:3;overflow:hidden}
-  .lab{position:absolute;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;display:flex;flex-direction:column;align-items:center;white-space:nowrap}
-  .lab .bub{background:#fff;border-radius:8px;padding:3px 8px;font-size:12px;font-weight:600;box-shadow:0 1px 6px rgba(0,0,0,.25);display:flex;align-items:center;gap:5px}
+  #labels.algo .lab{opacity:.35}
+  .lab{position:absolute;left:0;top:0;will-change:transform;transform:translate(-50%,-100%);pointer-events:auto;cursor:pointer;display:flex;flex-direction:column;align-items:center;white-space:nowrap;transition:opacity .2s}
+  .lab .bub{background:#fff;border-radius:9px;padding:4px 9px;font-size:12px;font-weight:600;box-shadow:0 1px 6px rgba(0,0,0,.25);display:flex;align-items:center;gap:6px}
   .lab .dot{width:9px;height:9px;border-radius:50%}
   .lab .stem{width:2px;height:10px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-  .lab.sel .bub{background:var(--blue);color:#fff}
-  #card{position:absolute;left:364px;bottom:12px;width:320px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:5;padding:12px 14px;display:none}
-  #card h3{margin:0 0 2px;font-size:15px}
-  #card .m{font-size:12px;color:var(--mute)}
-  #card .row{margin-top:10px;flex-wrap:wrap}
-  #card a{font-size:12px;color:var(--blue)}
+  .lab.sel .bub{background:var(--red);color:#fff}
+  .lab.from .bub{background:var(--green);color:#fff}
+  .lab.sel .dot,.lab.from .dot{background:#fff!important}
+  .dbadge{position:absolute;transform:translate(-50%,-150%);font:600 10px Inter,system-ui,sans-serif;padding:1px 5px;border-radius:6px;background:#fff7ed;color:#9a3412;border:1px solid #fdba74;pointer-events:none;white-space:nowrap}
+  .dbadge.set{background:#ede9fe;color:#5b21b6;border-color:#c4b5fd}
+  .dbadge.cur{background:#fde047;color:#422006;border-color:#eab308}
   #load{position:absolute;inset:0;background:#eef1f4;display:flex;align-items:center;justify-content:center;z-index:20;font-size:14px;color:var(--mute);flex-direction:column;gap:10px}
   .spin{width:28px;height:28px;border:3px solid #cfd6dd;border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
-  @media (max-width:760px){.panel{width:calc(100vw - 24px);bottom:auto;max-height:46vh}#mini{width:180px;height:101px}#card{left:12px;right:12px;width:auto;bottom:120px}}
+
+  /* ---------- phones: the panel becomes a bottom sheet ---------- */
+  @media (max-width:760px){
+    .sheet{left:0;right:0;top:auto;bottom:0;width:auto;height:min(68vh,600px);border-radius:20px 20px 0 0;transform:translateY(calc(100% - var(--peek) - var(--sab)));transition:transform .28s ease}
+    .sheet.open{transform:none}
+    .grab{display:block;border:0;background:none;padding:9px 0 3px;cursor:pointer;width:100%}
+    .grab span{display:block;margin:0 auto;width:40px;height:5px;border-radius:3px;background:#c8cdd2}
+    .top{padding:4px 14px 8px 16px;cursor:pointer}
+    .logo{width:34px;height:34px}
+    #collapse{display:none}
+    .sub-uni{display:none}
+    #peek{display:block;color:var(--ink);font-weight:500}
+    .mapctl button{width:44px;height:44px}
+    #mini{width:150px;height:85px;top:calc(12px + var(--sat));right:66px;bottom:auto;border-width:2px}
+    #hud{bottom:calc(var(--peek) + var(--sab) + 12px);max-width:86vw}
+  }
 </style>
 <script type="importmap">
 {"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}
@@ -103,77 +178,111 @@
   <div id="labels"></div>
   <div id="load"><div class="spin"></div><div>Building the campus…</div></div>
 
-  <div class="panel" id="panel">
-    <div class="ph">
-      <h1>🧭 DSU Campus Navigator</h1>
-      <p>Dayananda Sagar University · Main Campus, Harohalli</p>
-    </div>
-    <div class="pb">
-      <label class="l">From</label>
-      <div class="row"><select id="from"></select><button class="btn ghost swap" id="swap" title="Swap">⇅</button></div>
-      <label class="l">To</label>
-      <select id="to"></select>
-      <div class="seg" id="mode">
-        <button data-m="walk" class="on">🚶 Walk</button>
-        <button data-m="cycle">🚲 Cycle</button>
-        <button data-m="drive">🚗 Drive</button>
+  <aside class="sheet" id="sheet" aria-label="Navigation panel">
+    <button class="grab" id="grab" aria-label="Expand or collapse panel"><span></span></button>
+    <header class="top" id="sheetTop">
+      <div class="brand">
+        <div class="logo"><svg width="22" height="22" viewBox="-12 -12 24 24" aria-hidden="true"><circle r="10" fill="#fff"/><polygon points="0,-8 3,1 -3,1" fill="#d93025"/><polygon points="0,8 3,-1 -3,-1" fill="#9aa0a6"/></svg></div>
+        <div style="min-width:0"><h1>DSU Campus Navigator</h1><p class="sub-uni">Dayananda Sagar University · Harohalli</p><p id="peek">Choose a destination</p></div>
       </div>
-      <div class="seg" id="opt">
-        <button data-o="short" class="on">Shortest distance</button>
-        <button data-o="fast">Fastest time</button>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <button class="btn ghost" id="nearGate" style="flex:1">Nearest gate</button>
-        <button class="btn ghost" id="nearPark" style="flex:1">Nearest parking</button>
-      </div>
-      <div class="routes" id="routes"></div>
-      <div class="sim">
-        <h4>Dijkstra simulation <span id="simState">—</span></h4>
-        <div class="row"><button class="btn" id="simPlay" style="flex:1">⏸ Pause</button><button class="btn ghost" id="simStep">Step ▸</button><button class="btn ghost" id="simRestart" title="Restart">↺</button><button class="btn ghost" id="simSkip" title="Jump to result">⏭</button></div>
-        <label class="l">Speed · <span id="simSpdLbl">6</span> steps/s</label>
-        <input type="range" id="simSpeed" min="1" max="40" value="6">
+      <button class="icon-btn" id="collapse" title="Hide panel" aria-label="Hide panel">✕</button>
+    </header>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="route" class="on" aria-selected="true"><span class="ti">🧭</span>Route</button>
+      <button role="tab" data-tab="places" aria-selected="false"><span class="ti">📍</span>Places</button>
+      <button role="tab" data-tab="algo" aria-selected="false"><span class="ti">🧠</span>How it works</button>
+      <button role="tab" data-tab="more" aria-selected="false"><span class="ti">⚙️</span>More</button>
+    </nav>
+    <div class="views" id="views">
+
+      <section class="view on" id="tab-route" role="tabpanel">
+        <div class="flabel">Where to?</div>
+        <div class="trip">
+          <div class="leg"><span class="pt a" title="Start"></span><select id="from" aria-label="Start"></select></div>
+          <div class="leg"><span class="pt b" title="Destination"></span><select id="to" aria-label="Destination"></select></div>
+          <button class="swap" id="swap" title="Swap start and destination" aria-label="Swap start and destination">⇅</button>
+        </div>
+        <div class="flabel">Travel by</div>
+        <div class="seg" id="mode">
+          <button data-m="walk" class="on">🚶 Walk</button>
+          <button data-m="cycle">🚲 Cycle</button>
+          <button data-m="drive">🚗 Drive</button>
+        </div>
+        <div class="flabel">Prefer</div>
+        <div class="seg" id="opt">
+          <button data-o="short" class="on">Shortest distance</button>
+          <button data-o="fast">Quickest time</button>
+        </div>
+        <div id="result" class="result empty">Choose where you're going.</div>
+        <div class="flabel">Nearest from your start</div>
+        <div class="quick">
+          <button class="btn ghost" id="nearGate">🚪 Gate</button>
+          <button class="btn ghost" id="nearPark">🅿️ Parking</button>
+        </div>
+      </section>
+
+      <section class="view" id="tab-places" role="tabpanel">
+        <input type="search" class="search" id="q" placeholder="Search places…" aria-label="Search places" autocomplete="off">
+        <div class="cats" id="cats"></div>
+        <ul class="plist" id="plist"></ul>
+        <p class="hint">Tap a place to get directions to it. Places marked ≈ have an estimated position.</p>
+      </section>
+
+      <section class="view" id="tab-algo" role="tabpanel">
+        <p class="intro" id="algoFor">Watch Dijkstra's algorithm search the campus roads for your route, one junction at a time.</p>
+        <div class="player">
+          <button id="simRestart" title="Restart" aria-label="Restart">↺</button>
+          <button id="simPlay" class="primary">▶ Play</button>
+          <button id="simStep" title="One step at a time">Step</button>
+          <button id="simSkip" title="Jump to the result" aria-label="Jump to the result">⏭</button>
+        </div>
+        <div class="flabel"><span>Speed</span><span><span id="simSpdLbl">8</span> steps / s</span></div>
+        <input type="range" id="simSpeed" min="1" max="40" value="8" aria-label="Simulation speed">
         <div class="stats"><div>Step<b id="stStep">0</b></div><div>Settled<b id="stSet">0</b></div><div>Frontier<b id="stFr">0</b></div></div>
-        <div class="cur" id="simCur">—</div>
+        <div class="explain" id="simCur"></div>
         <div class="legend">
-          <span><i style="background:#2f6fe4"></i>All possible paths</span>
-          <span><i style="background:#22d3ee"></i>Edges examined</span>
-          <span><i style="background:#e0262b"></i>Best path</span>
+          <span><i style="background:#2f6fe4"></i>Roads it can use</span>
+          <span><i style="background:#22d3ee"></i>Roads checked</span>
           <span><i class="dot" style="background:#f59e0b"></i>Frontier (tentative)</span>
           <span><i class="dot" style="background:#7c3aed"></i>Settled (final)</span>
-          <span><i class="dot" style="background:#facc15"></i>Current</span>
+          <span><i class="dot" style="background:#facc15"></i>Current junction</span>
+          <span><i style="background:#e0262b"></i>Best route</span>
         </div>
-        <ol class="log" id="simLog"></ol>
-      </div>
-      <div class="row" style="margin-top:10px"><button class="btn" id="walkIt" style="flex:1" disabled>▶ Animate along best path</button></div>
+        <details id="logBox"><summary>Step-by-step log</summary><ol class="log" id="simLog"></ol></details>
+      </section>
 
-      <label class="l">Places</label>
-      <div class="places" id="places"></div>
-
-      <details>
-        <summary>Distance comparison &amp; calibration</summary>
-        <div id="cmpWrap"></div>
-        <label class="l">Calibrate with a Google Maps measurement</label>
-        <div class="note" style="margin-top:0">Right-click → <i>Measure distance</i> in Google Maps between the two places selected above, then enter it here. Every distance on this page is rescaled to match.</div>
-        <div class="row" style="margin-top:6px"><input type="number" id="calIn" placeholder="Measured straight-line metres"><button class="btn ghost" id="calBtn">Apply</button></div>
-        <div class="note" id="calNote"></div>
-      </details>
-      <label class="l">Graphics</label>
-      <div class="seg" id="qual"><button data-q="low">Light (fast)</button><button data-q="high">Detailed</button></div>
-      <div class="note">
-        Roads, junctions and gates follow OpenStreetMap's mapped road geometry (© OpenStreetMap contributors, ODbL), checked against Google Maps satellite imagery; buildings are placed from the imagery and DSU's 360° virtual tour, and a few were moved off the mapped roads. Heights of buildings not shown in the tour, and places marked ≈, are estimates. Routing uses Dijkstra's algorithm over a road/footpath graph; alternative routes re-run Dijkstra with the best route's roads penalised.
-      </div>
+      <section class="view" id="tab-more" role="tabpanel">
+        <div class="group">
+          <h3>Graphics quality</h3>
+          <div class="seg" id="qual"><button data-q="low">Light · faster</button><button data-q="high">Detailed</button></div>
+          <p class="hint">Detailed adds shadows and more trees, and uses more battery. The page reloads to apply it.</p>
+        </div>
+        <div class="group">
+          <h3>Compare travel modes</h3>
+          <div id="cmpWrap"></div>
+        </div>
+        <div class="group">
+          <h3>Calibrate distances</h3>
+          <p class="hint" style="margin:0 0 10px">In Google Maps, right-click → <i>Measure distance</i> between your current start and destination, then enter the straight-line metres here. Every distance is rescaled to match.</p>
+          <div class="row"><input type="number" id="calIn" placeholder="Measured metres" inputmode="decimal"><button class="btn ghost" id="calBtn">Apply</button></div>
+          <p class="hint" id="calNote"></p>
+        </div>
+        <div class="group">
+          <h3>About</h3>
+          <p class="hint" style="margin:0">Roads, junctions and gates follow OpenStreetMap road geometry (© OpenStreetMap contributors, ODbL), checked against satellite imagery. Buildings are placed from imagery and DSU's 360° tour; some heights are estimates. Routes are found with Dijkstra's algorithm.</p>
+        </div>
+      </section>
     </div>
-  </div>
-  <button class="vb toggle" id="showPanel">☰ Directions</button>
+  </aside>
+  <button class="fab-open" id="showPanel" hidden>☰ Directions</button>
 
-  <div class="views">
-    <button class="vb" id="hidePanel" title="Hide panel">☰</button>
-    <button class="vb" id="vAerial">⟲ Whole campus</button>
+  <div class="mapctl">
+    <button id="vAerial" title="Show whole campus" aria-label="Show whole campus">⤢</button>
+    <button id="compass" title="Face north" aria-label="Face north"><svg width="30" height="30" viewBox="-20 -20 40 40" id="cmpSvg"><polygon points="0,-16 5,0 -5,0" fill="#d93025"/><polygon points="0,16 5,0 -5,0" fill="#9aa0a6"/></svg></button>
+    <button id="miniBtn" title="Overview map" aria-label="Toggle overview map">🗺️</button>
   </div>
-  <div id="compass" title="Face north"><svg width="40" height="40" viewBox="-20 -20 40 40" id="cmpSvg"><polygon points="0,-16 5,0 -5,0" fill="#d93025"/><polygon points="0,16 5,0 -5,0" fill="#9aa0a6"/><text x="0" y="-5" font-size="0" fill="#fff">N</text></svg></div>
   <canvas id="mini" width="600" height="338"></canvas>
-  <div id="hud">Drag to orbit · right-drag to pan · scroll to zoom · click a label for details</div>
-  <div id="card"></div>
+  <div id="hud">Drag to rotate · right-drag or two fingers to pan · scroll or pinch to zoom · tap a label to go there</div>
 </div>
 
 <script type="module">
@@ -593,11 +702,11 @@ paintGround();
    4. THREE.JS SCENE
    ============================================================ */
 const canvas=document.getElementById('gl');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:HQ,powerPreference:'low-power'});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,logarithmicDepthBuffer:true,powerPreference:HQ?'high-performance':'default'});
 renderer.setPixelRatio(HQ?Math.min(devicePixelRatio,1.5):1);
 renderer.shadowMap.enabled=HQ; renderer.shadowMap.type=THREE.PCFShadowMap; renderer.shadowMap.autoUpdate=false;
 const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(50,1,0.3,9000);
+const camera=new THREE.PerspectiveCamera(50,1,1,7000);
 camera.rotation.order='YXZ';
 
 // sky: cheap gradient background instead of an atmospheric shader
@@ -620,9 +729,9 @@ const ocv=document.createElement('canvas'); ocv.width=ocv.height=512; const ox=o
 ox.fillStyle=COL.land; ox.fillRect(0,0,512,512); for(let i=0;i<3000;i++){ox.fillStyle=`rgba(${110+R()*70|0},${115+R()*60|0},${60+R()*40|0},${0.08+R()*0.1})`;ox.beginPath();ox.arc(R()*512,R()*512,1+R()*6,0,7);ox.fill()}
 const otex=new THREE.CanvasTexture(ocv); otex.wrapS=otex.wrapT=THREE.RepeatWrapping; otex.repeat.set(40,40); otex.colorSpace=THREE.SRGBColorSpace;
 const outer=new THREE.Mesh(new THREE.PlaneGeometry(9000,9000),new THREE.MeshLambertMaterial({map:otex}));
-outer.rotation.x=-Math.PI/2; outer.position.y=-0.25; outer.receiveShadow=true; scene.add(outer);
+outer.rotation.x=-Math.PI/2; outer.position.y=-1.2; outer.receiveShadow=true; scene.add(outer);
 // highway continuation beyond frame
-for(const sx of [-1,1]){const hw=new THREE.Mesh(new THREE.PlaneGeometry(3000,32*S),new THREE.MeshLambertMaterial({color:0x55585e}));hw.rotation.x=-Math.PI/2;hw.position.set(sx*(800*S+1500),-0.1,Z(831));scene.add(hw)}
+for(const sx of [-1,1]){const hw=new THREE.Mesh(new THREE.PlaneGeometry(3000,32*S),new THREE.MeshLambertMaterial({color:0x55585e}));hw.rotation.x=-Math.PI/2;hw.position.set(sx*(800*S+1500),-0.6,Z(831));scene.add(hw)}
 
 // façade textures
 function facade(wall,glass,frame,style){
@@ -745,7 +854,7 @@ for(const [x,y] of SPIRES){
 // lake
 const lakeShape=new THREE.Shape(LAKE.map(p=>new THREE.Vector2(W(p[0]),-Z(p[1]))));
 const lake=new THREE.Mesh(new THREE.ShapeGeometry(lakeShape,24),new THREE.MeshLambertMaterial({color:0x3d7fa8,emissive:0x0d2a3d}));
-lake.rotation.x=-Math.PI/2; lake.position.y=0.08; scene.add(lake);
+lake.rotation.x=-Math.PI/2; lake.position.y=0.35; scene.add(lake);
 
 // gates
 for(const id of ['G2','G3','G4','G5']){
@@ -819,57 +928,104 @@ const cars=[];
 })();
 
 /* ============================================================
-   5. LABELS, ROUTE DRAWING, MINIMAP
+   5. SHARED HELPERS + MAP OVERLAYS
    ============================================================ */
-const labelsEl=document.getElementById('labels');
+const $=id=>document.getElementById(id);
+const fmtD=m=> m>=1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m';
+const fmtT=s=> s<60 ? Math.round(s)+' s' : Math.round(s/60)+' min';
+const isMobile=()=>matchMedia('(max-width:760px)').matches;
+const CAT={academic:'Academic & medical',hostel:'Residences',food:'Food',sports:'Sports',amenity:'Amenities',parking:'Parking',gate:'Gates'};
+const placeById=id=>PLACES.find(p=>p.id===id);
+const placeNode=id=>placeById(id).node;
+const shortName=p=>p.name.replace(/ \(.*\)/,'').replace(/ – .*/,'');
+function nodeVec(n){return new THREE.Vector3(W(NODES[n][0]),0,Z(NODES[n][1]))}
+const state={routes:[],mode:'walk',opt:'short',from:'g2',to:'main'};
+const ui={tab:'route',filter:'all'};
+const COL3={net:0x2f6fe4, explored:0x22d3ee, best:0xe0262b, frontier:0xf59e0b, settled:0x7c3aed, current:0xfacc15, src:0x16a34a, dst:0xe0262b};
+
+// Every overlay gets its own height above the ground and a fixed draw order, so the
+// lines never fight the ground (or each other) for the same pixels — that was the flicker.
+const LAYER={net:[0.6,10],explored:[0.9,11],bestEdge:[1.15,12],best:[1.25,13],chev:[1.4,14],cur:[1.55,15]};
+function overlayMat(color,opacity=1){return new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide,fog:false})}
+function disposeTree(o){o.traverse(x=>{if(x.geometry&&!x.userData.shared)x.geometry.dispose();if(x.material)(Array.isArray(x.material)?x.material:[x.material]).forEach(m=>m.dispose())})}
+
+// place labels
+const labelsEl=$('labels');
 const labels=PLACES.map(p=>{const el=document.createElement('div');el.className='lab';
   el.innerHTML=`<div class="bub"><span class="dot" style="background:${p.col}"></span>${p.name}${p.known?'':' <span style="opacity:.55;font-weight:500">≈</span>'}</div><div class="stem"></div>`;
-  el.onclick=()=>selectPlace(p.id,true); labelsEl.appendChild(el);
+  el.onclick=()=>pickDestination(p.id,true); labelsEl.appendChild(el);
   const h = p.id==='main'?42 : p.cat==='academic'||p.cat==='hostel'?22:6;
   return {p,el,pos:new THREE.Vector3(W(p.p[0]),h,Z(p.p[1]))}});
+function highlightLabels(){labels.forEach(l=>{l.el.classList.toggle('sel',l.p.id===state.to);l.el.classList.toggle('from',l.p.id===state.from&&state.from!==state.to)});dirty=true}
 
-let routeGroup=new THREE.Group(); scene.add(routeGroup);
-function ribbon(pts,width,color,y,opacity=1){
-  const pos=[],idx=[];
+function ribbon(pts,width,color,layer){
+  const [y,order]=LAYER[layer], pos=[],idx=[];
   for(let i=0;i<pts.length;i++){
     const p=pts[i], a=pts[Math.max(0,i-1)], b=pts[Math.min(pts.length-1,i+1)];
     let dx=b.x-a.x, dz=b.z-a.z; const L=Math.hypot(dx,dz)||1; dx/=L; dz/=L;
     pos.push(p.x-dz*width/2,y,p.z+dx*width/2, p.x+dz*width/2,y,p.z-dx*width/2);
-    if(i) {const k=i*2; idx.push(k-2,k-1,k, k-1,k+1,k);} }
+    if(i){const k=i*2; idx.push(k-2,k-1,k, k-1,k+1,k);} }
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx);
-  return new THREE.Mesh(g,new THREE.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-4}));
+  const m=new THREE.Mesh(g,overlayMat(color)); m.renderOrder=order; return m;
 }
-function densify(nodes,step=2){const out=[];for(let i=0;i<nodes.length-1;i++){const a=NODES[nodes[i]],b=NODES[nodes[i+1]];const A=new THREE.Vector3(W(a[0]),0,Z(a[1])),B=new THREE.Vector3(W(b[0]),0,Z(b[1]));const n=Math.max(1,Math.ceil(A.distanceTo(B)/step));for(let k=0;k<n;k++)out.push(A.clone().lerp(B,k/n))}const l=NODES[nodes.at(-1)];out.push(new THREE.Vector3(W(l[0]),0,Z(l[1])));return out}
+function densify(nodes,step=2){const out=[];for(let i=0;i<nodes.length-1;i++){const A=nodeVec(nodes[i]),B=nodeVec(nodes[i+1]);const n=Math.max(1,Math.ceil(A.distanceTo(B)/step));for(let k=0;k<n;k++)out.push(A.clone().lerp(B,k/n))}out.push(nodeVec(nodes.at(-1)));return out}
 function pin(x,z,color){const g=new THREE.Group();const s=new THREE.Mesh(new THREE.SphereGeometry(2.4,20,14),new THREE.MeshLambertMaterial({color,emissive:color,emissiveIntensity:.35}));s.position.y=9;const c=new THREE.Mesh(new THREE.ConeGeometry(1.4,7,16),s.material);c.rotation.x=Math.PI;c.position.y=4;g.add(s,c);g.position.set(x,0,z);return g}
-function pinColor(c){return c}
-// one merged mesh for many straight edges (cheap: a single draw call)
-function lineMesh(pairs,width,color,y,opacity=1){
-  const pos=[],idx=[]; let k=0;
+// many straight edges merged into one mesh (one draw call)
+function lineMesh(pairs,width,color,layer,opacity=1){
+  const [y,order]=LAYER[layer], pos=[],idx=[]; let k=0;
   for(const [a,b] of pairs){const A=nodeVec(a),B=nodeVec(b);let dx=B.x-A.x,dz=B.z-A.z;const L=Math.hypot(dx,dz)||1;dx/=L;dz/=L;const ox=-dz*width/2,oz=dx*width/2;
     pos.push(A.x+ox,y,A.z+oz, A.x-ox,y,A.z-oz, B.x+ox,y,B.z+oz, B.x-ox,y,B.z-oz); idx.push(k,k+1,k+2,k+1,k+3,k+2); k+=4;}
   const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.setIndex(idx);
-  return new THREE.Mesh(g,new THREE.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:false,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-4}));
+  const m=new THREE.Mesh(g,overlayMat(color,opacity)); m.renderOrder=order; return m;
 }
-function jointDots(ids,r,color,y){const geo=new THREE.CircleGeometry(r,14);geo.rotateX(-Math.PI/2);const m=new THREE.InstancedMesh(geo,new THREE.MeshBasicMaterial({color,depthWrite:false}),ids.length);const mm=new THREE.Matrix4();ids.forEach((n,i)=>{const v=nodeVec(n);mm.makeTranslation(v.x,y,v.z);m.setMatrixAt(i,mm)});return m}
+function jointDots(ids,r,color,layer){const [y,order]=LAYER[layer];const geo=new THREE.CircleGeometry(r,14);geo.rotateX(-Math.PI/2);const m=new THREE.InstancedMesh(geo,overlayMat(color),ids.length);const mm=new THREE.Matrix4();ids.forEach((n,i)=>{const v=nodeVec(n);mm.makeTranslation(v.x,y+0.01,v.z);m.setMatrixAt(i,mm)});m.renderOrder=order;return m}
+// Growable line set: one buffer allocated once and filled edge by edge, instead of
+// rebuilding a new mesh on every simulation step.
+function dynLines(cap,width,color,layer){
+  const [y,order]=LAYER[layer], pos=new Float32Array(cap*12), idx=new Uint32Array(cap*6);
+  for(let k=0;k<cap;k++){const b=k*4;idx.set([b,b+1,b+2,b+1,b+3,b+2],k*6)}
+  const g=new THREE.BufferGeometry(), attr=new THREE.BufferAttribute(pos,3); attr.setUsage(THREE.DynamicDrawUsage);
+  g.setAttribute('position',attr); g.setIndex(new THREE.BufferAttribute(idx,1)); g.setDrawRange(0,0);
+  const m=new THREE.Mesh(g,overlayMat(color)); m.frustumCulled=false; m.renderOrder=order; m.userData={n:0,cap,width,y}; scene.add(m); return m;
+}
+function dynAdd(m,a,b){const u=m.userData; if(u.n>=u.cap) return; const A=nodeVec(a),B=nodeVec(b); const dx=B.x-A.x,dz=B.z-A.z,L=Math.hypot(dx,dz)||1, ox=-dz/L*u.width/2, oz=dx/L*u.width/2;
+  m.geometry.attributes.position.array.set([A.x+ox,u.y,A.z+oz, A.x-ox,u.y,A.z-oz, B.x+ox,u.y,B.z+oz, B.x-ox,u.y,B.z-oz],u.n*12);
+  u.n++; m.geometry.attributes.position.needsUpdate=true; m.geometry.setDrawRange(0,u.n*6); dirty=true}
+function dynClear(m){m.userData.n=0;m.geometry.setDrawRange(0,0);dirty=true}
+const chevShape=new THREE.Shape([[0,1],[0.95,0.05],[0.95,-0.45],[0,0.5],[-0.95,-0.45],[-0.95,0.05]].map(p=>new THREE.Vector2(p[0],p[1])));
+const chevGeo=new THREE.ShapeGeometry(chevShape); chevGeo.rotateX(-Math.PI/2);
+
+// the best route: red ribbon with direction chevrons, green start pin, red end pin
+let routeGroup=new THREE.Group(); scene.add(routeGroup);
+function drawRoute(r){
+  disposeTree(routeGroup); scene.remove(routeGroup); routeGroup=new THREE.Group(); scene.add(routeGroup); dirty=true;
+  if(!r) return;
+  const pts=densify(r.nodes);
+  routeGroup.add(ribbon(pts,8,0x7f1d1d,'bestEdge'), ribbon(pts,5.6,COL3.best,'best'));
+  for(let i=6;i<pts.length-2;i+=7){const a=pts[i],b=pts[i+1];const m=new THREE.Mesh(chevGeo,overlayMat(0xffffff,0.95));m.userData.shared=true;m.renderOrder=LAYER.chev[1];
+    m.scale.setScalar(1.2);m.position.set(a.x,LAYER.chev[0],a.z);m.rotation.y=Math.atan2(-(b.x-a.x),-(b.z-a.z));routeGroup.add(m)}
+  const A=nodeVec(r.nodes[0]), B=nodeVec(r.nodes.at(-1));
+  routeGroup.add(pin(A.x,A.z,COL3.src), pin(B.x,B.z,COL3.dst));
+}
 
 /* ---------- Dijkstra simulation on the map ---------- */
-const COL3={net:0x2f6fe4, explored:0x22d3ee, best:0xe0262b, frontier:0xf59e0b, settled:0x7c3aed, current:0xfacc15, src:0x16a34a, dst:0xe0262b};
 const NODE_IDS=Object.keys(NODES), NODE_IX=Object.fromEntries(NODE_IDS.map((n,i)=>[n,i]));
-let netGroup=new THREE.Group(); scene.add(netGroup);
-let simGroup=new THREE.Group(); scene.add(simGroup);
-// all possible paths for the chosen mode, in blue
+let netGroup=new THREE.Group(); netGroup.visible=false; scene.add(netGroup);
+let simPins=new THREE.Group(); scene.add(simPins);
+const exLines=dynLines(EDGES.length+4,3.6,COL3.explored,'explored');
+const curLine=dynLines(1,6,COL3.current,'cur');
+// every road the chosen mode may use, in blue (shown only on the "How it works" tab)
 function drawNetwork(mode){
-  dirty=true; scene.remove(netGroup); netGroup=new THREE.Group(); scene.add(netGroup);
+  disposeTree(netGroup); scene.remove(netGroup); netGroup=new THREE.Group(); netGroup.visible=ui.tab==='algo'; scene.add(netGroup);
   const usable=EDGES.filter(e=>SPEED[mode][e.type]!=null);
-  netGroup.add(lineMesh(usable.map(e=>[e.a,e.b]),2.6,COL3.net,0.3,0.9));
-  const used=[...new Set(usable.flatMap(e=>[e.a,e.b]))];
-  netGroup.add(jointDots(used,1.6,COL3.net,0.31));
+  netGroup.add(lineMesh(usable.map(e=>[e.a,e.b]),2.6,COL3.net,'net',0.85));
+  netGroup.add(jointDots([...new Set(usable.flatMap(e=>[e.a,e.b]))],1.6,COL3.net,'net'));
+  dirty=true;
 }
-// node markers: one instanced mesh, colour per state
 const nodeMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(2.4,14,10),new THREE.MeshBasicMaterial({color:0xffffff}),NODE_IDS.length);
 nodeMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); scene.add(nodeMesh);
-const _m=new THREE.Matrix4(), _c=new THREE.Color(), _v=new THREE.Vector3(), _q=new THREE.Quaternion();
-function setNode(n,color,scale){const i=NODE_IX[n];const v=nodeVec(n);_m.compose(_v.set(v.x,2.6,v.z),_q,new THREE.Vector3(scale,scale,scale));nodeMesh.setMatrixAt(i,_m);nodeMesh.setColorAt(i,_c.set(color));nodeMesh.instanceMatrix.needsUpdate=true;if(nodeMesh.instanceColor)nodeMesh.instanceColor.needsUpdate=true;dirty=true}
+const _m=new THREE.Matrix4(), _c=new THREE.Color(), _v=new THREE.Vector3(), _q=new THREE.Quaternion(), _s=new THREE.Vector3();
+function setNode(n,color,scale){const i=NODE_IX[n];const v=nodeVec(n);_m.compose(_v.set(v.x,2.6,v.z),_q,_s.set(scale,scale,scale));nodeMesh.setMatrixAt(i,_m);nodeMesh.setColorAt(i,_c.set(color));nodeMesh.instanceMatrix.needsUpdate=true;if(nodeMesh.instanceColor)nodeMesh.instanceColor.needsUpdate=true;dirty=true}
 function hideNodes(){NODE_IDS.forEach(n=>setNode(n,0xffffff,0))}
 hideNodes();
 
@@ -887,7 +1043,7 @@ function* dijkstraSteps(adj, source, target){
     if(u===null){ yield {t:'noroute',dist,prev,visited}; return; }
     visited.add(u);
     yield {t:'visit',u,dist,prev,visited};
-    if(u===target){ yield {t:'done',dist,prev,visited}; return; }
+    if(u===target){ yield {t:'done',u,dist,prev,visited}; return; }
     for(const {to:v,w} of adj.get(u)){
       if(visited.has(v)) continue;
       const alt=dist.get(u)+w, old=dist.get(v);
@@ -896,231 +1052,256 @@ function* dijkstraSteps(adj, source, target){
     }
   }
 }
-const sim={gen:null,playing:false,acc:0,speed:6,step:0,src:null,dst:null,cur:null,explored:[],exploredKeys:new Set(),exMesh:null,edgeMesh:null,done:false,badges:new Map(),dist:null,visited:null,prev:null};
-function nodeLabel(n){const p=PLACES.find(x=>x.node===n);return p?p.name.replace(/ \(.*\)/,'').replace(/ – .*/,''):'junction '+n}
+const SIM_IDLE='Press <b>Play</b> to watch the search, or <b>Step</b> to go one move at a time.';
+const sim={gen:null,playing:false,acc:0,speed:8,step:0,src:null,dst:null,cur:null,exploredKeys:new Set(),done:false,badges:new Map(),dist:null,visited:null,prev:null};
+function nodeLabel(n){const p=PLACES.find(x=>x.node===n);if(p)return shortName(p);const e=(G[n]||[]).find(x=>x.type!=='hw')||(G[n]||[])[0];return e?e.name.replace(/ \(.*\)/,'')+' junction':'a junction'}
 function fmtW(w){ if(w===Infinity) return '∞'; return state.opt==='fast' ? (w<90? Math.round(w)+' s' : (w/60).toFixed(1)+' min') : fmtD(w*CAL); }
-function simLog(txt,cls){const li=document.createElement('li');li.innerHTML=txt;if(cls)li.className=cls;const ol=$('simLog');ol.prepend(li);while(ol.children.length>60)ol.lastChild.remove()}
-function clearSim(){
-  scene.remove(simGroup); simGroup=new THREE.Group(); scene.add(simGroup); hideNodes();
-  for(const el of sim.badges.values()) el.remove(); sim.badges.clear();
-  Object.assign(sim,{gen:null,step:0,cur:null,explored:[],exploredKeys:new Set(),exMesh:null,edgeMesh:null,done:false,dist:null,visited:null,prev:null});
-  $('simLog').innerHTML=''; $('simCur').textContent='—'; updateStats(); dirty=true;
-}
+const logItems=[];
+function simLog(txt,cls){logItems.unshift([txt,cls||'']); if(logItems.length>80) logItems.pop();
+  if($('logBox').open){const li=document.createElement('li');li.innerHTML=txt;li.className=cls||'';const ol=$('simLog');ol.prepend(li);while(ol.children.length>80)ol.lastChild.remove()}}
+function renderLog(){$('simLog').innerHTML=logItems.map(([t,c])=>`<li class="${c}">${t}</li>`).join('')}
 function badge(n){let el=sim.badges.get(n);if(!el){el=document.createElement('div');el.className='dbadge';labelsEl.appendChild(el);sim.badges.set(n,el)}return el}
 function updateStats(){
   $('stStep').textContent=sim.step;
   $('stSet').textContent=sim.visited?sim.visited.size:0;
   let fr=0; if(sim.dist) for(const [v,d] of sim.dist) if(d<Infinity&&!sim.visited.has(v)) fr++;
   $('stFr').textContent=fr;
-  $('simState').textContent= sim.done?'finished': sim.playing?'running':'paused';
-  $('simPlay').textContent= sim.playing?'⏸ Pause':'▶ Play';
+  $('simPlay').textContent= sim.playing?'⏸ Pause': sim.done?'↺ Play again':'▶ Play';
 }
-function refreshExplored(){ if(sim.exMesh) simGroup.remove(sim.exMesh); sim.exMesh=lineMesh(sim.explored,3.6,COL3.explored,0.38); simGroup.add(sim.exMesh); }
-function startSim(autoplay=true){
-  clearSim(); drawRoutes(null);
-  const r=state.routes[0]; if(!r) { updateStats(); return; }
+function clearSim(){
+  dynClear(exLines); dynClear(curLine); disposeTree(simPins); scene.remove(simPins); simPins=new THREE.Group(); scene.add(simPins); hideNodes();
+  for(const el of sim.badges.values()) el.remove(); sim.badges.clear();
+  Object.assign(sim,{gen:null,playing:false,acc:0,step:0,cur:null,exploredKeys:new Set(),done:false,dist:null,visited:null,prev:null});
+  logItems.length=0; renderLog(); $('simCur').innerHTML=SIM_IDLE; updateStats(); dirty=true;
+}
+// leave the simulation and show the plain route again
+function resetSimView(){ clearSim(); routeGroup.visible=true; dirty=true; }
+function startSim(autoplay){
+  clearSim();
+  const r=state.routes[0]; if(!r){ $('simCur').textContent='Set two different places on the Route tab first.'; return false; }
+  routeGroup.visible=false;   // the best route is revealed when the search reaches it
   sim.src=r.nodes[0]; sim.dst=r.nodes.at(-1);
-  const adj=buildAdj(state.mode,state.opt);
-  sim.gen=dijkstraSteps(adj,sim.src,sim.dst);
-  simGroup.add(pin(W(NODES[sim.src][0]),Z(NODES[sim.src][1]),COL3.src)); simGroup.add(pin(W(NODES[sim.dst][0]),Z(NODES[sim.dst][1]),COL3.dst));
+  sim.gen=dijkstraSteps(buildAdj(state.mode,state.opt),sim.src,sim.dst);
+  const A=nodeVec(sim.src), B=nodeVec(sim.dst); simPins.add(pin(A.x,A.z,COL3.src), pin(B.x,B.z,COL3.dst));
   fitTo([sim.src,sim.dst]);
-  sim.playing=autoplay; simStep();
+  sim.playing=autoplay; simStep(); return true;
 }
 function simStep(){
   if(!sim.gen||sim.done) return false;
   const {value:ev,done}=sim.gen.next(); if(done||!ev){sim.done=true;sim.playing=false;updateStats();return false}
   sim.dist=ev.dist; sim.visited=ev.visited; sim.prev=ev.prev; sim.step++;
-  if(sim.edgeMesh){simGroup.remove(sim.edgeMesh);sim.edgeMesh=null}
+  dynClear(curLine);
   if(ev.t==='init'){
-    setNode(sim.src,COL3.frontier,1); const b=badge(sim.src); b.textContent='0';
+    setNode(sim.src,COL3.frontier,1); badge(sim.src).textContent='0';
     simLog(`Start at <b>${nodeLabel(sim.src)}</b>: dist = 0, every other junction = ∞`);
-    $('simCur').innerHTML=`Initialise: dist[start] = 0, all others ∞. Target: <b>${nodeLabel(sim.dst)}</b>`;
+    $('simCur').innerHTML=`<b>Start.</b> Distance to the start is 0; every other junction is ∞ (unknown). Goal: <b>${nodeLabel(sim.dst)}</b>.`;
   } else if(ev.t==='visit'){
-    if(sim.cur&&sim.cur!==ev.u) { setNode(sim.cur,COL3.settled,1); const b=badge(sim.cur); b.className='dbadge set'; }
+    if(sim.cur&&sim.cur!==ev.u){ setNode(sim.cur,COL3.settled,1); badge(sim.cur).className='dbadge set'; }
     sim.cur=ev.u; setNode(ev.u,COL3.current,1.7); const b=badge(ev.u); b.className='dbadge cur'; b.textContent=fmtW(ev.dist.get(ev.u));
     simLog(`Settle <b>${nodeLabel(ev.u)}</b> — smallest tentative distance ${fmtW(ev.dist.get(ev.u))}, now final`,'v');
-    $('simCur').innerHTML=`Picked the unvisited junction with the smallest distance: <b>${nodeLabel(ev.u)}</b> (${fmtW(ev.dist.get(ev.u))}). Its distance is now final.`;
+    $('simCur').innerHTML=`<b>Pick the closest unvisited junction:</b> ${nodeLabel(ev.u)} (${fmtW(ev.dist.get(ev.u))}). Its distance is now final.`;
   } else if(ev.t==='relax'){
-    const k=ekey(ev.u,ev.v); if(!sim.exploredKeys.has(k)){sim.exploredKeys.add(k);sim.explored.push([ev.u,ev.v]);refreshExplored()}
-    sim.edgeMesh=lineMesh([[ev.u,ev.v]],6,COL3.current,0.44); simGroup.add(sim.edgeMesh);
+    const k=ekey(ev.u,ev.v); if(!sim.exploredKeys.has(k)){sim.exploredKeys.add(k);dynAdd(exLines,ev.u,ev.v)}
+    dynAdd(curLine,ev.u,ev.v);
     const b=badge(ev.v);
     if(ev.improved){ setNode(ev.v,COL3.frontier,1); b.className='dbadge'; b.textContent=fmtW(ev.alt);
       simLog(`&nbsp;&nbsp;${nodeLabel(ev.u)} → ${nodeLabel(ev.v)}: ${fmtW(ev.old)} → <b>${fmtW(ev.alt)}</b> ✓`,'ok');
-      $('simCur').innerHTML=`Relax edge to <b>${nodeLabel(ev.v)}</b>: ${fmtW(ev.dist.get(ev.u))} + ${fmtW(ev.w)} = ${fmtW(ev.alt)} &lt; ${fmtW(ev.old)} → update.`;
+      $('simCur').innerHTML=`<b>Check the road to ${nodeLabel(ev.v)}:</b> ${fmtW(ev.dist.get(ev.u))} + ${fmtW(ev.w)} = ${fmtW(ev.alt)}, shorter than ${fmtW(ev.old)} → update it.`;
     } else {
       simLog(`&nbsp;&nbsp;${nodeLabel(ev.u)} → ${nodeLabel(ev.v)}: ${fmtW(ev.alt)} ≥ ${fmtW(ev.old)}, keep`);
-      $('simCur').innerHTML=`Relax edge to <b>${nodeLabel(ev.v)}</b>: ${fmtW(ev.alt)} is not shorter than ${fmtW(ev.old)} → no change.`;
+      $('simCur').innerHTML=`<b>Check the road to ${nodeLabel(ev.v)}:</b> ${fmtW(ev.alt)} is not shorter than ${fmtW(ev.old)} → no change.`;
     }
   } else if(ev.t==='done'){
-    setNode(ev.u||sim.dst,COL3.dst,1.8);
-    sim.done=true; sim.playing=false;
-    const path=[]; for(let v=sim.dst; v!==null; v=ev.prev.get(v)) path.unshift(v);
-    drawRoutes(path); badge(sim.dst).className='dbadge cur';
-    simLog(`Reached <b>${nodeLabel(sim.dst)}</b>. Best path = ${fmtW(ev.dist.get(sim.dst))} through ${path.length} junctions (followed prev[] back from the target)`,'done');
-    $('simCur').innerHTML=`<b style="color:#b91c1c">Done.</b> The target was settled, so its distance is final. Best path shown in red.`;
-    renderResult(); $('walkIt').disabled=false;
-  } else if(ev.t==='noroute'){ sim.done=true; sim.playing=false; simLog('No route exists for this mode.','done'); }
+    setNode(sim.dst,COL3.dst,1.8); badge(sim.dst).className='dbadge cur';
+    sim.done=true; sim.playing=false; routeGroup.visible=true;
+    simLog(`Reached <b>${nodeLabel(sim.dst)}</b>. Best path = ${fmtW(ev.dist.get(sim.dst))}, found after settling ${ev.visited.size} junctions`,'done');
+    $('simCur').innerHTML=`<b style="color:#b91c1c">Found it.</b> The destination was settled at ${fmtW(ev.dist.get(sim.dst))}, so that distance is final. The best route is shown in red.`;
+  } else if(ev.t==='noroute'){ sim.done=true; sim.playing=false; simLog('No route exists for this mode.','done'); $('simCur').textContent='No route exists for this travel mode.'; }
   updateStats(); dirty=true; return true;
 }
-// the best path, in red
-function drawRoutes(path){
-  dirty=true; scene.remove(routeGroup); routeGroup=new THREE.Group(); scene.add(routeGroup);
-  if(!path) return;
-  const pts=densify(path);
-  routeGroup.add(ribbon(pts,8,0x7f1d1d,0.5)); routeGroup.add(ribbon(pts,5.6,COL3.best,0.54));
-  for(let i=6;i<pts.length-2;i+=7){const a=pts[i],b=pts[i+1];const m=chevronMesh(0xffffff,0.95);m.scale.setScalar(1.2);m.position.set(a.x,0.6,a.z);m.rotation.y=Math.atan2(-(b.x-a.x),-(b.z-a.z));routeGroup.add(m)}
-}
-function fitTo(nodes){
-  const vs=nodes.map(nodeVec); const c=vs.reduce((a,b)=>a.add(b),new THREE.Vector3()).multiplyScalar(1/vs.length);
-  let span=0; for(const v of vs) span=Math.max(span,v.distanceTo(c)); const d=span*1.6+220;
-  flyTo(c,new THREE.Vector3(0,d*0.8,d*0.65));
-}
-const chevShape=new THREE.Shape([[0,1],[0.95,0.05],[0.95,-0.45],[0,0.5],[-0.95,-0.45],[-0.95,0.05]].map(p=>new THREE.Vector2(p[0],p[1])));
-const chevGeo=new THREE.ShapeGeometry(chevShape); chevGeo.rotateX(-Math.PI/2);
-function chevronMesh(color,op){return new THREE.Mesh(chevGeo,new THREE.MeshBasicMaterial({color,transparent:true,opacity:op,depthWrite:false}))}
 
 // minimap
-const mini=document.getElementById('mini'), mx=mini.getContext('2d');
+const mini=$('mini'), mx=mini.getContext('2d');
 const MW=mini.width, MH=mini.height, MS=MW/1600;
 const miniBase=document.createElement('canvas'); miniBase.width=MW; miniBase.height=MH; miniBase.getContext('2d').drawImage(gcv,0,0,MW,MH);
 function drawMini(){
+  if(mini.hidden) return;
   mx.drawImage(miniBase,0,0);
-  const r=sim.done?state.routes[0]:null;
+  const r=routeGroup.visible?state.routes[0]:null;
   if(r){mx.strokeStyle='#e0262b';mx.lineWidth=5;mx.lineJoin='round';mx.beginPath();r.nodes.forEach((n,i)=>{const p=NODES[n];i?mx.lineTo(p[0]*MS,p[1]*MS):mx.moveTo(p[0]*MS,p[1]*MS)});mx.stroke()}
-  // camera
-  let px,pz,yaw;
-  px=controls.target.x;pz=controls.target.z;{const d=new THREE.Vector3();camera.getWorldDirection(d);yaw=Math.atan2(-d.x,-d.z)}
-  const mxp=(px/S+800)*MS, myp=(pz/S+450)*MS;
+  const d=new THREE.Vector3(); camera.getWorldDirection(d); const yaw=Math.atan2(-d.x,-d.z);
+  const mxp=(controls.target.x/S+800)*MS, myp=(controls.target.z/S+450)*MS;
   mx.save();mx.translate(MW-26,26);mx.rotate(Math.atan2(-0.629,-0.777));mx.fillStyle='rgba(255,255,255,.9)';mx.beginPath();mx.arc(0,0,18,0,7);mx.fill();
-  mx.fillStyle='#d93025';mx.beginPath();mx.moveTo(0,-14);mx.lineTo(6,2);mx.lineTo(-6,2);mx.fill();mx.fillStyle='#202124';mx.font='bold 12px Inter';mx.textAlign='center';mx.fillText('N',0,14);mx.restore();
+  mx.fillStyle='#d93025';mx.beginPath();mx.moveTo(0,-14);mx.lineTo(6,2);mx.lineTo(-6,2);mx.fill();mx.fillStyle='#202124';mx.font='bold 12px system-ui';mx.textAlign='center';mx.fillText('N',0,14);mx.restore();
   mx.save();mx.translate(mxp,myp);mx.rotate(-yaw);
   mx.fillStyle='rgba(26,115,232,.25)';mx.beginPath();mx.moveTo(0,0);mx.arc(0,0,40,-Math.PI/2-0.5,-Math.PI/2+0.5);mx.fill();
   mx.fillStyle='#1a73e8';mx.strokeStyle='#fff';mx.lineWidth=2.5;mx.beginPath();mx.arc(0,0,7,0,7);mx.fill();mx.stroke();mx.restore();
 }
 
 /* ============================================================
-   6. CAMERA (3D aerial, orbit controls) + ROUTE PREVIEW
+   6. CAMERA + ROUTE PREVIEW
    ============================================================ */
 const controls=new OrbitControls(camera,canvas);
-controls.enableDamping=true; controls.maxPolarAngle=1.42; controls.minDistance=25; controls.maxDistance=2600;
-camera.position.set(W(700),520,Z(1180)); controls.target.set(W(760),0,Z(460)); controls.update();
-const state={view:'aerial',routes:[],active:0,mode:'walk',opt:'short',from:'g2',to:'main'};
-function nodeVec(n){return new THREE.Vector3(W(NODES[n][0]),0,Z(NODES[n][1]))}
-function edgeName(a,b){const e=G[a].find(x=>x.to===b);return e?e.name:''}
-
-document.getElementById('compass').onclick=()=>{ const t=controls.target, d=camera.position.distanceTo(t); camera.position.set(t.x+0.629*d*0.8, Math.max(80,d*0.6), t.z-0.777*d*0.8); controls.update(); };
+controls.enableDamping=true; controls.dampingFactor=0.08; controls.maxPolarAngle=1.42; controls.minDistance=25; controls.maxDistance=2600;
+const HOME_T=new THREE.Vector3(W(760),0,Z(470)), HOME_OFF=()=>new THREE.Vector3(W(700)-W(760),520,Z(1180)-Z(460)).multiplyScalar(innerWidth<innerHeight?1.45:1);
+controls.target.copy(HOME_T); camera.position.copy(HOME_T).add(HOME_OFF()); controls.update();
+let fly=null; function flyTo(t,off){fly={from:controls.target.clone(),to:t,cf:camera.position.clone(),ct:t.clone().add(off||new THREE.Vector3(90,150,190)),t0:performance.now()}}
+// frame a set of junctions, keeping the current viewing direction (no disorienting spins)
+function fitTo(nodes){
+  let x0=Infinity,x1=-Infinity,z0=Infinity,z1=-Infinity;
+  for(const n of nodes){const v=nodeVec(n);x0=Math.min(x0,v.x);x1=Math.max(x1,v.x);z0=Math.min(z0,v.z);z1=Math.max(z1,v.z)}
+  const c=new THREE.Vector3((x0+x1)/2,0,(z0+z1)/2), d=(Math.max(x1-x0,z1-z0)*0.75+220)*Math.max(1,1/camera.aspect);
+  const dir=camera.position.clone().sub(controls.target); dir.y=0; if(dir.lengthSq()<1) dir.set(0,0,1); dir.normalize();
+  if(!isMobile() && !$('sheet').classList.contains('hidden')) c.addScaledVector(new THREE.Vector3(dir.z,0,-dir.x),-d*0.22); // keep the route clear of the side panel
+  flyTo(c,new THREE.Vector3(dir.x*d*0.62,d*0.85,dir.z*d*0.62));
+}
+$('compass').onclick=()=>{ const t=controls.target, d=camera.position.distanceTo(t); camera.position.set(t.x+0.629*d*0.8, Math.max(80,d*0.6), t.z-0.777*d*0.8); controls.update(); dirty=true; };
 mini.addEventListener('click',e=>{const r=mini.getBoundingClientRect();const px=(e.clientX-r.left)/r.width*1600, py=(e.clientY-r.top)/r.height*900;
-  const dx=W(px)-controls.target.x,dz=Z(py)-controls.target.z;controls.target.x+=dx;controls.target.z+=dz;camera.position.x+=dx;camera.position.z+=dz});
+  const dx=W(px)-controls.target.x,dz=Z(py)-controls.target.z;controls.target.x+=dx;controls.target.z+=dz;camera.position.x+=dx;camera.position.z+=dz;dirty=true});
 
-// route preview: a marker travels the active route; the camera follows from above
+// route preview: a marker travels the route and the camera follows it
 const marker=new THREE.Group();
 {const b=new THREE.Mesh(new THREE.SphereGeometry(3,20,14),new THREE.MeshBasicMaterial({color:0xe0262b}));b.position.y=3.5;
- const r=new THREE.Mesh(new THREE.RingGeometry(4,5.2,32),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=0.6;
+ const r=new THREE.Mesh(new THREE.RingGeometry(4,5.2,32),overlayMat(0xffffff));r.rotation.x=-Math.PI/2;r.position.y=1.7;r.renderOrder=16;
  marker.add(b,r); marker.visible=false; scene.add(marker);}
 let preview=null;
 function startPreview(){
-  const r=state.routes[state.active]; if(!r) return;
+  const r=state.routes[0]; if(!r) return;
   const pts=densify(r.nodes,1); const cum=[0]; for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+pts[i].distanceTo(pts[i-1]));
-  preview={pts,cum,s:0,speed:{walk:25,cycle:40,drive:60}[state.mode],r}; marker.visible=true; fly=null;
-  const p=pts[0]; flyTo(p.clone());
+  preview={pts,cum,s:0,speed:{walk:25,cycle:40,drive:60}[state.mode]}; marker.visible=true; marker.position.copy(pts[0]);
+  const dir=camera.position.clone().sub(controls.target).setY(0).normalize(); flyTo(pts[0].clone(),new THREE.Vector3(dir.x*120,150,dir.z*120));
+  syncPrevBtn(); if(isMobile()) setSheet(false); dirty=true;
 }
-function stopPreview(){ preview=null; marker.visible=false; dirty=true; }
+function stopPreview(){ if(!preview&&!marker.visible) return; preview=null; marker.visible=false; dirty=true; syncPrevBtn(); }
+function togglePreview(){ preview?stopPreview():startPreview(); }
+function syncPrevBtn(){const b=$('prevBtn'); if(b) b.textContent=preview?'■ Stop preview':'▶ Preview route'}
 function samplePreview(s){const a=preview;let i=a.cum.findIndex(c=>c>=s);if(i<=0)return a.pts[Math.max(0,i)].clone();const t=(s-a.cum[i-1])/(a.cum[i]-a.cum[i-1]);return a.pts[i-1].clone().lerp(a.pts[i],t)}
 
 /* ============================================================
    7. UI
    ============================================================ */
-const $=id=>document.getElementById(id);
-const fmtD=m=> m>=1000 ? (m/1000).toFixed(2)+' km' : Math.round(m)+' m';
-const fmtT=s=> s<60 ? Math.round(s)+' s' : Math.round(s/60)+' min';
 function fillSelects(){
-  const groups={academic:'Academic & Medical',hostel:'Residences',food:'Food',sports:'Sports',amenity:'Amenities',parking:'Parking',gate:'Gates'};
   for(const sel of [$('from'),$('to')]){ sel.innerHTML='';
-    for(const g in groups){const og=document.createElement('optgroup');og.label=groups[g];PLACES.filter(p=>p.cat===g).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name+(p.known?'':' ≈');og.appendChild(o)});sel.appendChild(og)} }
+    for(const g in CAT){const og=document.createElement('optgroup');og.label=CAT[g];PLACES.filter(p=>p.cat===g).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name+(p.known?'':' ≈');og.appendChild(o)});sel.appendChild(og)} }
   $('from').value=state.from; $('to').value=state.to;
-  const pl=$('places'); PLACES.forEach(p=>{const c=document.createElement('button');c.className='chip';c.innerHTML=`<span style="color:${p.col}">●</span> ${p.name}`;c.onclick=()=>selectPlace(p.id,true);pl.appendChild(c)});
+  $('cats').innerHTML=[['all','All'],...Object.entries(CAT)].map(([k,v])=>`<button data-cat="${k}" class="${k==='all'?'on':''}">${v}</button>`).join('');
 }
-function placeNode(id){ return PLACES.find(p=>p.id===id).node; }
-let lastMode=null;
+function renderPlaces(){
+  const q=$('q').value.trim().toLowerCase();
+  const list=PLACES.filter(p=>(ui.filter==='all'||p.cat===ui.filter)&&(!q||p.name.toLowerCase().includes(q)));
+  $('plist').innerHTML = list.length ? list.map(p=>{
+    const tag=p.id===state.to?' · <i>destination</i>':p.id===state.from?' · <i>start</i>':'';
+    return `<li><button class="pmain" data-go="${p.id}"><span class="dot" style="background:${p.col}"></span><span class="pn"><b>${p.name}${p.known?'':' ≈'}</b><small>${CAT[p.cat]}${tag}</small></span></button><button class="pfrom" data-from="${p.id}" title="Use as start">Start here</button></li>`}).join('')
+    : '<li class="none">No places match your search.</li>';
+}
+let lastMode=null, lastPair='';
 function compute(){
   stopPreview();
   if(state.mode!==lastMode){ drawNetwork(state.mode); lastMode=state.mode; }
   const src=placeNode(state.from), dst=placeNode(state.to);
   const best = src===dst ? null : findRoute(src,dst,state.mode,state.opt);   // reference dijkstra()
-  state.routes = best ? [best] : []; state.active=0;
-  $('walkIt').disabled=true;
-  $('routes').innerHTML = best ? '<div class="note">Dijkstra is searching… watch the map.</div>' : '<div class="note">Pick two different places.</div>';
-  renderCompare();
-  startSim(true);
+  state.routes = best ? [best] : [];
+  resetSimView(); drawRoute(best); renderResult(); renderCompare(); highlightLabels(); renderPlaces();
+  const pair=state.from+'>'+state.to;
+  if(best && pair!==lastPair && lastPair) fitTo(best.nodes);
+  lastPair=pair;
 }
+function setPeek(t){$('peek').textContent=t}
 function renderResult(){
-  const r=state.routes[0]; if(!r) return;
-  const via=[...new Set(r.segs.map(s=>s.name))].filter(n=>!/access|Plaza/.test(n)).slice(0,3).join(' → ');
-  $('routes').innerHTML=`<div class="rc on"><div class="t">${fmtT(r.time)}<small>${fmtD(r.len)}</small><span class="tag" style="background:#fde8e8;color:#b91c1c">Best path</span></div><div class="v">via ${via}${r.hw?` · ${fmtD(r.hw)} on Kanakapura Rd`:''} · found after ${sim.step} steps, ${sim.visited.size} of ${NODE_IDS.length} junctions settled</div></div>`;
+  const el=$('result'), r=state.routes[0], from=placeById(state.from), to=placeById(state.to);
+  $('algoFor').innerHTML=`Watch Dijkstra's algorithm search the campus roads for the best route from <b>${shortName(from)}</b> to <b>${shortName(to)}</b> (${({walk:'walking',cycle:'cycling',drive:'driving'})[state.mode]}, ${state.opt==='fast'?'quickest time':'shortest distance'}).`;
+  if(state.from===state.to){ el.className='result empty'; el.innerHTML='Your start and destination are the same place. Pick a different destination.'; setPeek('Choose a destination'); return; }
+  if(!r){ el.className='result empty'; el.innerHTML= state.mode==='drive' ? 'No drivable route to this place. Some places are only reachable on foot — try <b>Walk</b>.' : 'No route found between these places.'; setPeek('No route found'); return; }
+  const via=[...new Set(r.segs.map(s=>s.name))].filter(n=>!/access|Plaza|crossover/i.test(n)).slice(0,3).join(' → ');
+  const ll=toLatLng(to.p[0],to.p[1]);
+  el.className='result';
+  el.innerHTML=`<div class="big">${fmtT(r.time)} <span>· ${fmtD(r.len)}</span></div>
+    <div class="via">To <b>${shortName(to)}</b>${via?` via ${via}`:''}${r.hw?` · ${fmtD(r.hw)} on Kanakapura Rd`:''}</div>
+    <div class="acts"><button class="btn block" id="prevBtn">▶ Preview route</button><a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${ll.lat.toFixed(6)},${ll.lng.toFixed(6)}&travelmode=${({walk:'walking',cycle:'bicycling',drive:'driving'})[state.mode]}">Google Maps ↗</a></div>`;
+  $('prevBtn').onclick=togglePreview; syncPrevBtn();
+  setPeek(`${fmtT(r.time)} · ${fmtD(r.len)} to ${shortName(to)}`);
 }
 function renderCompare(){
-  const src=placeNode(state.from), dst=placeNode(state.to); if(src===dst){$('cmpWrap').innerHTML='';return}
+  const src=placeNode(state.from), dst=placeNode(state.to); if(src===dst){$('cmpWrap').innerHTML='<p class="hint" style="margin:0">Pick two different places first.</p>';return}
   const A=NODES[src],B=NODES[dst], crow=Math.hypot(A[0]-B[0],A[1]-B[1])*S*CAL;
   const rows=[];
-  for(const m of ['walk','cycle','drive']){const r=findRoute(src,dst,m,'short');if(r)rows.push(`<tr><td>${{walk:'🚶 Walk',cycle:'🚲 Cycle',drive:'🚗 Drive'}[m]}</td><td>${fmtD(r.len)}</td><td>${fmtT(r.time)}</td><td>${(r.len/crow).toFixed(2)}×</td></tr>`)}
-  // compare with a route forced to use the highway (external road) if possible
-  const hwRoute=forcedHighway(src,dst);
-  const ll=toLatLng(B[0],B[1]);
-  $('cmpWrap').innerHTML=`<table class="cmp"><tr><th>Mode</th><th>Distance</th><th>Time</th><th>Detour</th></tr>${rows.join('')}
-  <tr><td>📏 Straight line</td><td>${fmtD(crow)}</td><td>—</td><td>1.00×</td></tr>
-  ${hwRoute?`<tr><td>🛣 Via Kanakapura Rd (drive)</td><td>${fmtD(hwRoute.len)}</td><td>${fmtT(hwRoute.time)}</td><td>${(hwRoute.len/crow).toFixed(2)}×</td></tr>`:''}</table>
-  <div class="note">Detour = route length ÷ straight-line distance. Speeds: walk 4.9 km/h, cycle 15 km/h, campus driving 20 km/h, Kanakapura Rd 50 km/h.
-  <br><a href="https://www.google.com/maps/dir/?api=1&destination=${ll.lat.toFixed(6)},${ll.lng.toFixed(6)}&travelmode=walking" target="_blank" rel="noopener">Compare in Google Maps ↗</a></div>`;
-  $('calNote').textContent = `Current scale factor ×${CAL.toFixed(3)} · this pair is ${fmtD(crow)} apart on the model.`;
+  for(const m of ['walk','cycle','drive']){const r=findRoute(src,dst,m,'short');rows.push(`<tr><td>${{walk:'🚶 Walk',cycle:'🚲 Cycle',drive:'🚗 Drive'}[m]}</td>${r?`<td>${fmtD(r.len)}</td><td>${fmtT(r.time)}</td>`:'<td>—</td><td>no route</td>'}</tr>`)}
+  const hw=forcedHighway(src,dst);
+  $('cmpWrap').innerHTML=`<p class="hint" style="margin:0 0 8px">${shortName(placeById(state.from))} → ${shortName(placeById(state.to))}</p>
+  <table class="cmp"><tr><th>Mode</th><th>Distance</th><th>Time</th></tr>${rows.join('')}
+  <tr><td>📏 Straight line</td><td>${fmtD(crow)}</td><td>—</td></tr>
+  ${hw?`<tr><td>🛣 Via Kanakapura Rd</td><td>${fmtD(hw.len)}</td><td>${fmtT(hw.time)}</td></tr>`:''}</table>
+  <p class="hint">Speeds: walk 4.9 km/h, cycle 15 km/h, campus driving 20 km/h, Kanakapura Rd 50 km/h.</p>`;
+  $('calNote').textContent = `Current scale ×${CAL.toFixed(3)} · this pair is ${fmtD(crow)} apart on the model.`;
 }
 function forcedHighway(src,dst){
   // shortest drive that leaves via one gate, uses Kanakapura Rd, re-enters via another
   const gates=['G2','G3','G4','G5']; const dS=distancesTo(src,gates,'drive'), dD=distancesTo(dst,gates,'drive'); let best=null;
   for(const g1 of gates)for(const g2 of gates){if(g1===g2)continue;const hw=Math.abs(NODES[g1][0]-NODES[g2][0])*S, acc=40*S/2;
-    const internal1=dS[g1], internal2=dD[g2]; if(internal1==null||internal2==null)continue;
-    const L=internal1+internal2+hw+acc, T=(internal1+internal2+acc)/5.6+hw/13.9; if(!best||L<best.len)best={len:L*CAL,time:T*CAL}}
+    const i1=dS[g1], i2=dD[g2]; if(i1==null||i2==null)continue;
+    const L=i1+i2+hw+acc, T=(i1+i2+acc)/5.6+hw/13.9; if(!best||L<best.len)best={len:L*CAL,time:T*CAL}}
   return best;
 }
-function selectPlace(id,fly){
-  const p=PLACES.find(x=>x.id===id); state.to=id; $('to').value=id; compute();
-  labels.forEach(l=>l.el.classList.toggle('sel',l.p.id===id)); dirty=true;
-  const ll=toLatLng(p.p[0],p.p[1]);
-  const src=placeNode(state.from), dd=state.routes[0];
-  $('card').style.display='block';
-  $('card').innerHTML=`<h3>${p.name}${p.known?'':' <span style="font-weight:500;color:#5f6670">≈</span>'}</h3><div class="m">${({academic:'Academic / medical',sports:'Sports',hostel:'Residence',food:'Food',amenity:'Amenity',parking:'Parking',gate:'Campus gate'})[p.cat]} · ${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}${dd?` · ${fmtD(dd.len)} from ${$('from').selectedOptions[0].textContent}`:''}</div>
-   <div class="row"><button class="btn" id="cGo">▶ Preview route</button><button class="btn ghost" id="cFrom">Start from here</button><button class="btn ghost" id="cX">✕</button></div>
-   <div style="margin-top:8px"><a href="https://www.google.com/maps/search/?api=1&query=${ll.lat.toFixed(6)},${ll.lng.toFixed(6)}" target="_blank" rel="noopener">Open in Google Maps ↗</a></div>`;
-  $('cGo').onclick=()=>startPreview(); $('cFrom').onclick=()=>{state.from=id;$('from').value=id;compute()}; $('cX').onclick=()=>{$('card').style.display='none'};
-}
-let fly=null; function flyTo(t,off){fly={from:controls.target.clone(),to:t,cf:camera.position.clone(),ct:t.clone().add(off||new THREE.Vector3(90,150,190)),t0:performance.now()}}
+// choosing places
+function pickDestination(id,collapse){ state.to=id; $('to').value=id; lastPair=lastPair||'init'; compute(); switchTab('route',false); if(collapse&&isMobile()) setSheet(false); }
+function pickStart(id,collapse){ state.from=id; $('from').value=id; lastPair=lastPair||'init'; compute(); switchTab('route',false); if(collapse&&isMobile()) setSheet(false); }
 function nearestOfCat(cat){
-  const src=placeNode(state.from); const d=distancesTo(src,PLACES.filter(x=>x.cat===cat).map(x=>x.node),state.mode==='drive'?'drive':'walk'); let best=null;
-  for(const p of PLACES.filter(x=>x.cat===cat)){const v=d[p.node];if(v!=null&&(!best||v<best.v))best={v,p}}
-  if(best) selectPlace(best.p.id,true);
+  const src=placeNode(state.from), cands=PLACES.filter(x=>x.cat===cat&&x.id!==state.from);
+  const d=distancesTo(src,cands.map(x=>x.node),state.mode==='drive'?'drive':'walk'); let best=null;
+  for(const p of cands){const v=d[p.node];if(v!=null&&(!best||v<best.v))best={v,p}}
+  if(best) pickDestination(best.p.id,true);
 }
+// tabs + sheet
+function switchTab(t,expand=true){
+  if(ui.tab!==t){
+    const was=ui.tab; ui.tab=t;
+    document.querySelectorAll('.tabs button').forEach(b=>{const on=b.dataset.tab===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='tab-'+t));
+    if(was==='algo') resetSimView();
+    netGroup.visible = t==='algo'; labelsEl.classList.toggle('algo',t==='algo');
+    if(t==='algo'){ stopPreview(); $('simCur').innerHTML=SIM_IDLE; }
+    $('views').scrollTop=0; dirty=true;
+  }
+  if(expand&&isMobile()) setSheet(true);
+}
+function setSheet(open){ $('sheet').classList.toggle('open',open); }
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+$('grab').onclick=()=>setSheet(!$('sheet').classList.contains('open'));
+$('sheetTop').onclick=e=>{ if(isMobile()&&!e.target.closest('button')) setSheet(!$('sheet').classList.contains('open')); };
+$('collapse').onclick=()=>{ $('sheet').classList.add('hidden'); $('showPanel').hidden=false; };
+$('showPanel').onclick=()=>{ $('sheet').classList.remove('hidden'); $('showPanel').hidden=true; };
+
 fillSelects();
-$('from').onchange=e=>{state.from=e.target.value;compute()};
-$('to').onchange=e=>{selectPlace(e.target.value,true)};
+$('from').onchange=e=>pickStart(e.target.value,false);
+$('to').onchange=e=>pickDestination(e.target.value,false);
 $('swap').onclick=()=>{ [state.from,state.to]=[state.to,state.from]; $('from').value=state.from; $('to').value=state.to; compute(); };
 document.querySelectorAll('#mode button').forEach(b=>b.onclick=()=>{state.mode=b.dataset.m;document.querySelectorAll('#mode button').forEach(x=>x.classList.toggle('on',x===b));compute()});
 document.querySelectorAll('#opt button').forEach(b=>b.onclick=()=>{state.opt=b.dataset.o;document.querySelectorAll('#opt button').forEach(x=>x.classList.toggle('on',x===b));compute()});
 $('nearGate').onclick=()=>nearestOfCat('gate'); $('nearPark').onclick=()=>nearestOfCat('parking');
+$('q').oninput=renderPlaces;
+$('cats').onclick=e=>{const b=e.target.closest('[data-cat]'); if(!b) return; ui.filter=b.dataset.cat; $('cats').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderPlaces();};
+$('plist').onclick=e=>{const g=e.target.closest('[data-go]'), f=e.target.closest('[data-from]'); if(f) pickStart(f.dataset.from,false); else if(g) pickDestination(g.dataset.go,true);};
 document.querySelectorAll('#qual button').forEach(b=>{b.classList.toggle('on',b.dataset.q===QUALITY);b.onclick=()=>{if(b.dataset.q===QUALITY)return;try{localStorage.setItem('dsuQ',b.dataset.q)}catch(e){}location.reload()}});
-$('walkIt').onclick=startPreview;
-$('simPlay').onclick=()=>{ if(sim.done){startSim(true);return} sim.playing=!sim.playing; updateStats(); };
-$('simStep').onclick=()=>{ sim.playing=false; if(sim.done) startSim(false); else simStep(); updateStats(); };
-$('simRestart').onclick=()=>startSim(true);
-$('simSkip').onclick=()=>{ sim.playing=false; let n=0; while(!sim.done && n++<5000) simStep(); };
+// simulation player
+$('simPlay').onclick=()=>{ if(!sim.gen||sim.done){ startSim(true); } else { sim.playing=!sim.playing; } updateStats(); };
+$('simStep').onclick=()=>{ if(!sim.gen||sim.done){ startSim(false); } else { sim.playing=false; simStep(); } updateStats(); };
+$('simRestart').onclick=()=>{ startSim(true); updateStats(); };
+$('simSkip').onclick=()=>{ if(!sim.gen||sim.done) startSim(false); sim.playing=false; let n=0; while(!sim.done && n++<5000) simStep(); updateStats(); };
 $('simSpeed').oninput=e=>{ sim.speed=+e.target.value; $('simSpdLbl').textContent=e.target.value; };
-$('vAerial').onclick=()=>{const t=controls.target;flyTo(new THREE.Vector3(W(760),0,Z(470)))};
-$('hidePanel').onclick=()=>{$('panel').classList.add('hidden');$('showPanel').style.display='block';$('card').style.left='12px'};
-$('showPanel').onclick=()=>{$('panel').classList.remove('hidden');$('showPanel').style.display='none';$('card').style.left=''};
+$('logBox').addEventListener('toggle',()=>{ if($('logBox').open) renderLog(); });
+// map buttons
+$('vAerial').onclick=()=>{ stopPreview(); flyTo(HOME_T.clone(),HOME_OFF()); };
+mini.hidden=isMobile(); $('miniBtn').classList.toggle('on',!mini.hidden);
+$('miniBtn').onclick=()=>{ mini.hidden=!mini.hidden; $('miniBtn').classList.toggle('on',!mini.hidden); dirty=true; };
 $('calBtn').onclick=()=>{const v=parseFloat($('calIn').value);const src=placeNode(state.from),dst=placeNode(state.to);if(!(v>0)||src===dst)return;
   const A=NODES[src],B=NODES[dst],crow=Math.hypot(A[0]-B[0],A[1]-B[1])*S; CAL=v/crow; try{localStorage.setItem('dsuCal',CAL)}catch(e){} compute()};
+// the gesture hint fades after the first interaction
+{const hud=$('hud'); if(matchMedia('(pointer:coarse)').matches) hud.textContent='Drag to rotate · two fingers to pan · pinch to zoom · tap a label to go there'; const hide=()=>hud.classList.add('gone'); setTimeout(hide,9000); canvas.addEventListener('pointerdown',()=>setTimeout(hide,1200),{once:true});}
+controls.addEventListener('start',()=>{ if(preview){ /* user took over the camera */ } });
 compute();
 
 /* ============================================================
-   8. LOOP
+   8. LOOP — renders only when something changed
    ============================================================ */
 function resize(){dirty=true;const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 addEventListener('resize',resize); resize();
@@ -1130,35 +1311,34 @@ function tick(){
   if(sim.playing&&!sim.done){ sim.acc+=rdt*sim.speed; let n=0; while(sim.acc>=1&&!sim.done&&n++<50){ sim.acc-=1; simStep(); } }
   if(preview){const a=preview; a.s+=a.speed*rdt; const end=a.cum.at(-1);
     const p=samplePreview(Math.min(a.s,end)); marker.position.copy(p);
-    if(!fly){const dx=p.x-controls.target.x, dz=p.z-controls.target.z; controls.target.x+=dx*Math.min(1,dt*4); controls.target.z+=dz*Math.min(1,dt*4); camera.position.x+=dx*Math.min(1,dt*4); camera.position.z+=dz*Math.min(1,dt*4);}
-    dirty=true; if(a.s>=end) preview=null;}
+    if(!fly){const k=Math.min(1,dt*4), dx=(p.x-controls.target.x)*k, dz=(p.z-controls.target.z)*k; controls.target.x+=dx; controls.target.z+=dz; camera.position.x+=dx; camera.position.z+=dz;}
+    dirty=true; if(a.s>=end){ preview=null; syncPrevBtn(); }}
   if(fly){const t=Math.min(1,(now-fly.t0)/1100), e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; controls.target.lerpVectors(fly.from,fly.to,e); camera.position.lerpVectors(fly.cf,fly.ct,e); if(t>=1)fly=null}
   controls.update();
-  // render only when the camera or scene changed
   camera.updateMatrixWorld();
   const e=camera.matrixWorld.elements, sig=e.map(v=>v.toFixed(3)).join()+camera.fov;
   if(sig===lastSig && !dirty){ requestAnimationFrame(tick); return; }
   lastSig=sig; dirty=false;
-  // compass
   const d=new THREE.Vector3(); camera.getWorldDirection(d); const yaw=Math.atan2(-d.x,-d.z);
   $('cmpSvg').style.transform=`rotate(${(yaw-NORTH_YAW)*180/Math.PI}deg)`;
   renderer.render(scene,camera);
-  // labels
-  const w=canvas.clientWidth,h=canvas.clientHeight;
+  const w=canvas.clientWidth,h=canvas.clientHeight, labMax=w<h?2300:1600;
   for(const l of labels){
     tmp.copy(l.pos).project(camera); const dd=camera.position.distanceTo(l.pos);
-    const vis = tmp.z<1 && tmp.x>-1.1&&tmp.x<1.1&&tmp.y>-1.1&&tmp.y<1.1 && (dd<1600 && (l.p.cat!=='gate'||dd<700));
-    if(!vis){l.el.style.display='none';continue}
-    l.el.style.display='flex'; l.el.style.left=(tmp.x*.5+.5)*w+'px'; l.el.style.top=(-tmp.y*.5+.5)*h+'px';
-    const s = Math.max(.75,Math.min(1,500/dd)); l.el.style.transform=`translate(-50%,-100%) scale(${s})`; l.el.style.zIndex=Math.round(5000-dd);
+    const vis = tmp.z<1 && tmp.x>-1.1&&tmp.x<1.1&&tmp.y>-1.1&&tmp.y<1.1 && (dd<labMax && (l.p.cat!=='gate'||dd<labMax*0.45||l.p.id===state.to||l.p.id===state.from));
+    if(!vis){ if(l.vis!==false){l.el.style.display='none';l.vis=false} continue; }
+    if(l.vis!==true){l.el.style.display='flex';l.vis=true}
+    const s=Math.max(.75,Math.min(1,500/dd));
+    l.el.style.transform=`translate(${((tmp.x*.5+.5)*w).toFixed(1)}px,${((-tmp.y*.5+.5)*h).toFixed(1)}px) translate(-50%,-100%) scale(${s.toFixed(3)})`;
+    l.el.style.zIndex=Math.round(5000-dd);
   }
+  const showBadges=ui.tab==='algo';
   for(const [n,el] of sim.badges){ const v=nodeVec(n); tmp.set(v.x,4,v.z).project(camera);
-    if(tmp.z>=1||Math.abs(tmp.x)>1.05||Math.abs(tmp.y)>1.05){el.style.display='none';continue}
+    if(!showBadges||tmp.z>=1||Math.abs(tmp.x)>1.05||Math.abs(tmp.y)>1.05){el.style.display='none';continue}
     el.style.display=''; el.style.left=(tmp.x*.5+.5)*w+'px'; el.style.top=(-tmp.y*.5+.5)*h+'px'; }
   drawMini();
   requestAnimationFrame(tick);
 }
-function nearestEdgeNodes(r,s){let acc=0;for(let i=0;i<r.segs.length;i++){acc+=r.segs[i].len;if(acc>=s)return [r.nodes[i],r.nodes[i+1]]}return [r.nodes.at(-2),r.nodes.at(-1)]}
 renderer.shadowMap.needsUpdate=true;
 $('load').remove();
 tick();

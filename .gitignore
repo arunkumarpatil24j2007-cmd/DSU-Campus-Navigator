@@ -7,3 +7,4 @@ android/local.properties
 android/.idea/
 *.apk
 .DS_Store
+.claude/
