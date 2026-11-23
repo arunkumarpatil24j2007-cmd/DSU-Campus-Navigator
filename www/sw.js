@@ -1,5 +1,5 @@
-const V='dsu-nav-v2';
-const ASSETS=['./','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-192.png','icons/icon-512.png','vendor/three/three.module.js','vendor/three/addons/controls/OrbitControls.js'];
+const V='dsu-nav-v3';
+const ASSETS=['./','index.html','manifest.webmanifest','icons/icon.svg','icons/icon-192.png','icons/icon-512.png','vendor/three/three.module.js','vendor/three/addons/controls/OrbitControls.js','vendor/fonts/doto-latin-900-normal.woff2','vendor/fonts/space-mono-latin-400-normal.woff2','vendor/fonts/space-mono-latin-700-normal.woff2','vendor/fonts/space-grotesk-latin-500-normal.woff2'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 // HTML: network first (so updates arrive); other files: cache first, for offline use
